@@ -78,7 +78,8 @@ def protocol(my_pid: int, L: int):
         all_proposed_values[msg.from_pid] = msg.v
     print(f'p{my_pid}: {all_proposed_values}')
 
-    # UNIMPLEMENTED
+    # TO-DO
+    raise NotImplementedError('See TODO in README.md')
     initial_clique = pids_rxd_from
 
     # DECIDE

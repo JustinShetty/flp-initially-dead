@@ -1,0 +1,26 @@
+# Fault-Tolerant Consensus with Initially Dead Processes
+
+Section 4 of FLP paper (linked below) describes an algorithm that can solve consensus in an asynchronous system with $n>2t$ (strict majority of processes are correct).
+
+`sim.py` attempts to implement this algorithm.
+
+[Michael J. Fischer, Nancy A. Lynch, and Mike Paterson. 1985. Impossibility of
+Distributed Consensus with One Faulty Process. J. ACM 32, 2 (1985), 374–382.
+https://doi.org/10.1145/3149.214121](https://dl.acm.org/doi/10.1145/3149.214121)
+
+## To-Do
+* Calculate $G^{+}$ from $G$
+* Determine the *initial clique* from $G^{+}$
+
+## Setup
+### Python Environment
+```
+$ python -m venv venv
+$ source venv/bin/activate
+$ (venv) pip install -r requirements.txt
+```
+
+## Run
+```
+$ (venv) ./sim.py
+```

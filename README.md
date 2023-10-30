@@ -1,6 +1,6 @@
 # Fault-Tolerant Consensus with Initially Dead Processes
 
-Section 4 of FLP paper (linked below) describes an algorithm that can solve consensus in an asynchronous system with $n>2t$ (strict majority of processes are correct).
+Section 4 of FLP paper (linked below) describes an algorithm that can solve consensus in an asynchronous system with $n>2t$ (strict majority of processes are correct) as long as the failures occur before the algorithm runs.
 
 `sim.py` attempts to implement this algorithm.
 

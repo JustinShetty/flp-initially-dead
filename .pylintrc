@@ -1,6 +1,0 @@
-[MASTER]
-disable=
-    W0101, # unreachable
-
-[BASIC]
-good-names=N, T, L

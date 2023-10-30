@@ -11,26 +11,35 @@ from typing import Dict, List, Set
 INBOUND_QUEUES: Dict[int, queue.Queue] = {}
 OUTBOUND_QUEUES: Dict[int, queue.Queue] = {}
 
+
 @dataclasses.dataclass
-class Stage1():
+class Stage1:
     """Message type for stage 1 of the algorithm."""
+
     from_pid: int
+
     def __init__(self, from_pid: int):
         self.from_pid = from_pid
+
     def __repr__(self) -> str:
         return f'p{self.from_pid}-> Stage1(({self.from_pid}, ))'
+
 
 @dataclasses.dataclass
 class Stage2(Stage1):
     """Message type for stage 2 of the algorithm."""
+
     v: int
     known_pids: List[int]
+
     def __init__(self, from_pid: int, v: int, known_pids: List[int]):
         super().__init__(from_pid)
         self.v = v
         self.known_pids = known_pids
+
     def __repr__(self) -> str:
         return f'p{self.from_pid}-> Stage2(({self.from_pid}, {self.v}, {self.known_pids}, ))'
+
 
 def dispatcher(pids: Set[int]):
     """Infrastructure for passing messages."""
@@ -42,6 +51,7 @@ def dispatcher(pids: Set[int]):
             for pid in pids:
                 INBOUND_QUEUES[pid].put(msg)
         time.sleep(0.1)
+
 
 def protocol(my_pid: int, L: int):
     """Dictates behavior of each process."""
@@ -83,9 +93,12 @@ def protocol(my_pid: int, L: int):
     initial_clique = pids_rxd_from
 
     # DECIDE
-    initial_clique_vals = {v for pid, v in all_proposed_values.items() if pid in initial_clique}
+    initial_clique_vals = {
+        v for pid, v in all_proposed_values.items() if pid in initial_clique
+    }
     decided_value = min(list(initial_clique_vals))
     print(f'p{my_pid} DECIDED: {decided_value}')
+
 
 def main():
     """Prepare and start 'processes'."""
@@ -106,10 +119,16 @@ def main():
         OUTBOUND_QUEUES[pid] = queue.Queue()
 
     # Build threads
-    dispatcher_th = threading.Thread(target=dispatcher, args=(pids, ), daemon=True)
+    dispatcher_th = threading.Thread(target=dispatcher, args=(pids,), daemon=True)
     node_ths: Dict[int, threading.Thread] = {}
     for pid in range(N):
-        node_ths[pid] = threading.Thread(target=protocol, args=(pid, L, ))
+        node_ths[pid] = threading.Thread(
+            target=protocol,
+            args=(
+                pid,
+                L,
+            ),
+        )
 
     # Start threads
     dispatcher_th.start()
@@ -119,6 +138,7 @@ def main():
     # Wait for nodes to finish
     for pid in pids:
         node_ths[pid].join()
+
 
 if __name__ == '__main__':
     main()

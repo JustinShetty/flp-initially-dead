@@ -83,8 +83,7 @@ def protocol(all_pids: Set[int], my_pid: int, L: int):
         # direct ancestor
         G.add_edge(msg.from_pid, my_pid)
         # ancestor's ancestors
-        for known_pid in msg.known_pids:
-            G.add_edge(known_pid, msg.from_pid)
+        G.add_edges_from([(known_pid, msg.from_pid) for known_pid in msg.known_pids])
 
     all_proposed_values = dict(sorted(all_proposed_values.items()))
     print(f'p{my_pid}: all_proposed_values = {all_proposed_values}')

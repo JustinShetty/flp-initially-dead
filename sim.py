@@ -36,7 +36,7 @@ class Stage2(Stage1):
         return f'p{self.from_pid}->p{self.to_pid} Stage2(({self.from_pid}, {self.v}, {self.known_pids}, ))'
 
 
-def dispatcher(pids: Set[int]):
+def dispatcher():
     """Infrastructure for passing messages."""
     global DISPATCH_QUEUE
     while True:
@@ -119,7 +119,7 @@ def main():
         INBOUND_QUEUES[pid] = queue.Queue()
 
     # Build threads
-    dispatcher_th = threading.Thread(target=dispatcher, args=(live_pids,), daemon=True)
+    dispatcher_th = threading.Thread(target=dispatcher, daemon=True)
     node_ths: Dict[int, threading.Thread] = {}
     for pid in range(N):
         node_ths[pid] = threading.Thread(

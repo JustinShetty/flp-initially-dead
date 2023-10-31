@@ -8,12 +8,7 @@ Section 4 of FLP paper (linked below) describes an algorithm that can solve cons
 Distributed Consensus with One Faulty Process. J. ACM 32, 2 (1985), 374–382.
 https://doi.org/10.1145/3149.214121](https://dl.acm.org/doi/10.1145/3149.214121)
 
-## To-Do
-* Calculate $G^{+}$ from $G$
-* Determine the *initial clique* from $G^{+}$
-
 ## Setup
-### Python Environment
 ```
 $ python -m venv venv
 $ source venv/bin/activate

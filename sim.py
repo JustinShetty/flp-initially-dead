@@ -8,6 +8,8 @@ import threading
 import time
 from typing import Dict, List, Set
 
+import networkx as nx
+
 DISPATCH_QUEUE = queue.Queue()
 INBOUND_QUEUES: Dict[int, queue.Queue] = {}
 
@@ -53,41 +55,43 @@ def protocol(all_pids: Set[int], my_pid: int, L: int):
     # STAGE 1
     for to_pid in all_pids:
         msg = Stage1(to_pid, my_pid)
-        print(msg)
         DISPATCH_QUEUE.put(msg)
 
-    rxd_msgs: List[Stage1] = []
-    while len(rxd_msgs) < L:
+    G = nx.DiGraph()
+    G.add_node(my_pid)
+    while len(G) < L:
         msg: Stage1 = INBOUND_QUEUES[my_pid].get()
         if not isinstance(msg, Stage1):
             # defer Stage2 message
             INBOUND_QUEUES[my_pid].put(msg)
             continue
-        rxd_msgs.append(msg)
-    ancestors = {msg.from_pid for msg in rxd_msgs}
+        G.add_edge(msg.from_pid, msg.to_pid)
 
     # STAGE 2
     for to_pid in all_pids:
-        msg = Stage2(to_pid, my_pid, my_val, list(ancestors))
-        print(msg)
+        msg = Stage2(to_pid, my_pid, my_val, list(G.nodes()))
         DISPATCH_QUEUE.put(msg)
 
-    known_pids = ancestors
     pids_rxd_from = set()
     all_proposed_values = {}
-    while pids_rxd_from != known_pids:
+    while pids_rxd_from != set(G.nodes()):
         msg: Stage1 = INBOUND_QUEUES[my_pid].get()
         if not isinstance(msg, Stage2):
             continue
-        print(f'p{my_pid} RXD {msg}')
         pids_rxd_from.add(msg.from_pid)
-        known_pids.update([msg.from_pid] + msg.known_pids)
         all_proposed_values[msg.from_pid] = msg.v
-    print(f'p{my_pid}: {all_proposed_values}')
+        # direct ancestor
+        G.add_edge(msg.from_pid, my_pid)
+        # ancestor's ancestors
+        for known_pid in msg.known_pids:
+            G.add_edge(known_pid, msg.from_pid)
 
-    # TO-DO
-    raise NotImplementedError('See TODO in README.md')
-    initial_clique = pids_rxd_from
+    all_proposed_values = dict(sorted(all_proposed_values.items()))
+    print(f'p{my_pid}: all_proposed_values = {all_proposed_values}')
+
+    # In this case, the largest strongly-connected component is also the initial clique
+    initial_clique = max(nx.strongly_connected_components(G), key=len)
+    print(f'p{my_pid}: initial_clique: {initial_clique}')
 
     # DECIDE
     initial_clique_vals = {
@@ -100,16 +104,15 @@ def protocol(all_pids: Set[int], my_pid: int, L: int):
 def main():
     """Prepare and start 'processes'."""
     # Prepare constants
-    N = 3
+    N = 10
     T = math.ceil(N / 2) - 1
     L = math.ceil((N + 1) / 2)
-    # num_dead = random.randint(0, T)
-    num_dead = T
+    num_dead = random.randint(0, T)
     dead_procs = random.sample(range(0, N), num_dead)
     all_pids = {pid for pid in range(N)}
     live_pids = {pid for pid in range(N) if pid not in dead_procs}
-    print(f'N = {N}, L = {L}')
-    print(live_pids)
+    print(f'N = {N}, L = {L}, T (max initially dead) = {T}, num_dead = {num_dead}')
+    print(f'live_pids: {live_pids}')
 
     # Construct message queues
     for pid in range(N):

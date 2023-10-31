@@ -66,6 +66,8 @@ def protocol(my_pid: int, L: int):
     while len(rxd_msgs) < L:
         msg: Stage1 = INBOUND_QUEUES[my_pid].get()
         if not isinstance(msg, Stage1):
+            # defer Stage2 message
+            INBOUND_QUEUES[my_pid].put(msg)
             continue
         rxd_msgs.append(msg)
     ancestors = {msg.from_pid for msg in rxd_msgs}
@@ -75,21 +77,21 @@ def protocol(my_pid: int, L: int):
     print(msg)
     OUTBOUND_QUEUES[my_pid].put(msg)
 
-    live_pids = ancestors
+    known_pids = ancestors
     pids_rxd_from = set()
     all_proposed_values = {}
-    while pids_rxd_from != live_pids:
+    while pids_rxd_from != known_pids:
         msg: Stage1 = INBOUND_QUEUES[my_pid].get()
         if not isinstance(msg, Stage2):
             continue
         print(f'p{my_pid} RXD {msg}')
         pids_rxd_from.add(msg.from_pid)
-        live_pids.update([msg.from_pid] + msg.known_pids)
+        known_pids.update([msg.from_pid] + msg.known_pids)
         all_proposed_values[msg.from_pid] = msg.v
     print(f'p{my_pid}: {all_proposed_values}')
 
     # TO-DO
-    raise NotImplementedError('See TODO in README.md')
+    # raise NotImplementedError('See TODO in README.md')
     initial_clique = pids_rxd_from
 
     # DECIDE

@@ -8,21 +8,19 @@ import threading
 import time
 from typing import Dict, List, Set
 
+DISPATCH_QUEUE = queue.Queue()
 INBOUND_QUEUES: Dict[int, queue.Queue] = {}
-OUTBOUND_QUEUES: Dict[int, queue.Queue] = {}
 
 
 @dataclasses.dataclass
 class Stage1:
     """Message type for stage 1 of the algorithm."""
 
+    to_pid: int
     from_pid: int
 
-    def __init__(self, from_pid: int):
-        self.from_pid = from_pid
-
     def __repr__(self) -> str:
-        return f'p{self.from_pid}-> Stage1(({self.from_pid}, ))'
+        return f'p{self.from_pid}->p{self.to_pid} Stage1(({self.from_pid}, ))'
 
 
 @dataclasses.dataclass
@@ -32,35 +30,31 @@ class Stage2(Stage1):
     v: int
     known_pids: List[int]
 
-    def __init__(self, from_pid: int, v: int, known_pids: List[int]):
-        super().__init__(from_pid)
-        self.v = v
-        self.known_pids = known_pids
-
     def __repr__(self) -> str:
-        return f'p{self.from_pid}-> Stage2(({self.from_pid}, {self.v}, {self.known_pids}, ))'
+        return f'p{self.from_pid}->p{self.to_pid} Stage2(({self.from_pid}, {self.v}, {self.known_pids}, ))'
 
 
 def dispatcher(pids: Set[int]):
     """Infrastructure for passing messages."""
+    global DISPATCH_QUEUE
     while True:
-        for _, q in OUTBOUND_QUEUES.items():
-            if q.empty():
-                continue
-            msg: Stage1 = q.get()
-            for pid in pids:
-                INBOUND_QUEUES[pid].put(msg)
-        time.sleep(0.1)
+        if DISPATCH_QUEUE.empty():
+            time.sleep(0.1)
+            continue
+        msg: Stage1 = DISPATCH_QUEUE.get()
+        INBOUND_QUEUES[msg.to_pid].put(msg)
 
 
-def protocol(my_pid: int, L: int):
+def protocol(all_pids: Set[int], my_pid: int, L: int):
     """Dictates behavior of each process."""
+
     my_val = random.randint(0, 100)
 
     # STAGE 1
-    msg = Stage1(my_pid)
-    print(msg)
-    OUTBOUND_QUEUES[my_pid].put(msg)
+    for to_pid in all_pids:
+        msg = Stage1(to_pid, my_pid)
+        print(msg)
+        DISPATCH_QUEUE.put(msg)
 
     rxd_msgs: List[Stage1] = []
     while len(rxd_msgs) < L:
@@ -73,9 +67,10 @@ def protocol(my_pid: int, L: int):
     ancestors = {msg.from_pid for msg in rxd_msgs}
 
     # STAGE 2
-    msg = Stage2(my_pid, my_val, list(ancestors))
-    print(msg)
-    OUTBOUND_QUEUES[my_pid].put(msg)
+    for to_pid in all_pids:
+        msg = Stage2(to_pid, my_pid, my_val, list(ancestors))
+        print(msg)
+        DISPATCH_QUEUE.put(msg)
 
     known_pids = ancestors
     pids_rxd_from = set()
@@ -91,7 +86,7 @@ def protocol(my_pid: int, L: int):
     print(f'p{my_pid}: {all_proposed_values}')
 
     # TO-DO
-    # raise NotImplementedError('See TODO in README.md')
+    raise NotImplementedError('See TODO in README.md')
     initial_clique = pids_rxd_from
 
     # DECIDE
@@ -111,22 +106,23 @@ def main():
     # num_dead = random.randint(0, T)
     num_dead = T
     dead_procs = random.sample(range(0, N), num_dead)
-    pids = {pid for pid in range(N) if pid not in dead_procs}
+    all_pids = {pid for pid in range(N)}
+    live_pids = {pid for pid in range(N) if pid not in dead_procs}
     print(f'N = {N}, L = {L}')
-    print(pids)
+    print(live_pids)
 
     # Construct message queues
     for pid in range(N):
         INBOUND_QUEUES[pid] = queue.Queue()
-        OUTBOUND_QUEUES[pid] = queue.Queue()
 
     # Build threads
-    dispatcher_th = threading.Thread(target=dispatcher, args=(pids,), daemon=True)
+    dispatcher_th = threading.Thread(target=dispatcher, args=(live_pids,), daemon=True)
     node_ths: Dict[int, threading.Thread] = {}
     for pid in range(N):
         node_ths[pid] = threading.Thread(
             target=protocol,
             args=(
+                all_pids,
                 pid,
                 L,
             ),
@@ -134,11 +130,11 @@ def main():
 
     # Start threads
     dispatcher_th.start()
-    for pid in pids:
+    for pid in live_pids:
         node_ths[pid].start()
 
     # Wait for nodes to finish
-    for pid in pids:
+    for pid in live_pids:
         node_ths[pid].join()
 
 
